@@ -12,13 +12,25 @@
 
 AsyncWebServer server(80);
 
+// #define HORSEKILDEN
+#define BOLVERK
+
 #define LED_ON LOW
 #define LED_OFF HIGH
 #define RELAY_ON LOW
 #define RELAY_OFF HIGH
+#define RELAY1_PORT D2
+#define RELAY2_PORT D3
 
+#ifdef HORSEKILDEN
 const char* ssid = "Fukushima";
 const char* password = "";
+#endif
+
+#ifdef BOLVERK
+const char* ssid = "Bolverk";
+const char* password = "********";
+#endif
 const char* website = "<html><head><meta name=\"viewport\" content=\"width=device-width\"></head><body>R1: <form action=\"post\" method=\"post\"><input type=\"submit\" name=\"r1\" value=\"on\" /><input type=\"submit\" name=\"r1\" value=\"off\" /></form><br/><br/>R2: <form action=\"post\" method=\"post\"><input type=\"submit\" name=\"r2\" value=\"on\" /><input type=\"submit\" name=\"r2\" value=\"off\" /></form></body></html>";
 
 const char* PARAM_R1 = "r1";
@@ -37,11 +49,11 @@ void setup()
 {
     Serial.begin(9600);
     pinMode(LED_BUILTIN, OUTPUT); 
-    pinMode(D2, OUTPUT); 
-    pinMode(D3, OUTPUT); 
+    pinMode(RELAY1_PORT, OUTPUT); 
+    pinMode(RELAY2_PORT, OUTPUT); 
     digitalWrite(LED_BUILTIN, LED_OFF);
-    digitalWrite(D2, RELAY_OFF);
-    digitalWrite(D3, RELAY_OFF);
+    digitalWrite(RELAY1_PORT, RELAY_OFF);
+    digitalWrite(RELAY2_PORT, RELAY_OFF);
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
@@ -59,21 +71,6 @@ void setup()
         request->send(200, "text/html", website);
     });
 
-    // Send a GET request to <IP>/get?message=<message>
-    // server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request)
-    // {
-    //     String message;
-    //     if (request->hasParam(PARAM_MESSAGE))
-    //     {
-    //         message = request->getParam(PARAM_MESSAGE)->value();
-    //     }
-    //     else
-    //     {
-    //         message = "No message sent";
-    //     }
-    //     request->send(200, "text/plain", "Hello, GET: " + message);
-    // });
-
     // Send a POST request to <IP>/post with a form field message set to <message>
     server.on("/post", HTTP_POST, [](AsyncWebServerRequest *request)
     {
@@ -83,7 +80,7 @@ void setup()
             message = request->getParam(PARAM_R1, true)->value();
             if (message == VALUE_ON)
             {
-                digitalWrite(D2, RELAY_ON);
+                digitalWrite(RELAY1_PORT, RELAY_ON);
                 digitalWrite(LED_BUILTIN, LED_ON);
                 delay(200);
                 digitalWrite(LED_BUILTIN, LED_OFF);
@@ -91,7 +88,7 @@ void setup()
             }
             else if (message == VALUE_OFF)
             {
-                digitalWrite(D2, RELAY_OFF);
+                digitalWrite(RELAY1_PORT, RELAY_OFF);
                 digitalWrite(LED_BUILTIN, LED_ON);
                 delay(200);
                 digitalWrite(LED_BUILTIN, LED_OFF);
@@ -107,7 +104,7 @@ void setup()
             message = request->getParam(PARAM_R2, true)->value();
             if (message == VALUE_ON)
             {
-                digitalWrite(D3, RELAY_ON);
+                digitalWrite(RELAY2_PORT, RELAY_ON);
                 digitalWrite(LED_BUILTIN, LED_ON);
                 delay(200);
                 digitalWrite(LED_BUILTIN, LED_OFF);
@@ -115,7 +112,7 @@ void setup()
             }
             else if (message == VALUE_OFF)
             {
-                digitalWrite(D3, RELAY_OFF);
+                digitalWrite(RELAY2_PORT, RELAY_OFF);
                 digitalWrite(LED_BUILTIN, LED_ON);
                 delay(200);
                 digitalWrite(LED_BUILTIN, LED_OFF);
