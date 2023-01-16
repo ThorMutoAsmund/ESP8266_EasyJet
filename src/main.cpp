@@ -7,6 +7,7 @@
 #elif defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
+#include <ESP8266HTTPClient.h>
 #endif
 #include <ESPAsyncWebServer.h>
 
@@ -38,7 +39,16 @@ const char* PARAM_R2 = "r2";
 const char* VALUE_ON = "on";
 const char* VALUE_OFF = "off";
 
+const char* github_host = "api.github.com";
+const char* bolverk_host = "bolverkxr.azurewebsites.net";
+
+const uint8_t github_fingerprint[20] = { 0x29,0x70,0x30,0x74,0xCA,0x3C,0x48,0xF5,0x4A,0x79,0xC6,0x2D,0x11,0x57,0xA2,0x41,0x2A,0x2D,0x7D,0x5C };
+const uint8_t bolverk_fingerprint[20] = { 0x0B,0xAE,0xB8,0xB3,0xEA,0x3C,0x84,0x9D,0x87,0x80,0x89,0x12,0x2C,0x2B,0x63,0xB5,0x07,0xB1,0x06,0x8A };
+
 void ledDisplay(const String ip);
+void postIPAddress(const String ip);
+void getIPAddress();
+void setupServer();
 
 void notFound(AsyncWebServerRequest *request)
 {
@@ -48,6 +58,8 @@ void notFound(AsyncWebServerRequest *request)
 void setup()
 {
     Serial.begin(9600);
+    // while (!Serial) ;
+    
     pinMode(LED_BUILTIN, OUTPUT); 
     pinMode(RELAY1_PORT, OUTPUT); 
     pinMode(RELAY2_PORT, OUTPUT); 
@@ -64,8 +76,47 @@ void setup()
 
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
-    ledDisplay(WiFi.localIP().toString());
+    // ledDisplay(WiFi.localIP().toString());
+    postIPAddress(WiFi.localIP().toString());
 
+    setupServer();
+}
+
+void postIPAddress(const String ip)
+{
+    WiFiClientSecure client;
+    HTTPClient http;
+    
+    client.setFingerprint(bolverk_fingerprint);
+
+    Serial.print("connecting to ");
+    Serial.println(bolverk_host);
+    if (!client.connect(bolverk_host, 443)) 
+    {
+        Serial.println("Secure connection failed");
+        return;
+    }
+
+    Serial.println("Secure connection OK");
+
+    client.print(String("GET ") + "/api/easyjet?value=" + ip + " HTTP/1.1\r\n" + "Host: " + bolverk_host + "\r\n" + "Connection: close\r\n\r\n");
+
+    unsigned long timeout = millis();
+    while (client.available() == 0)
+    {
+        if (millis() - timeout > 5000)
+        {
+            Serial.println("Client timeout");
+            client.stop();
+            return;
+        }
+    }
+
+    Serial.println("Client request OK");
+}
+
+void setupServer()
+{
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
     {
         request->send(200, "text/html", website);
